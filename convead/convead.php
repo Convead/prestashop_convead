@@ -17,7 +17,7 @@ class Convead extends Module
     
     if ($this->id AND !Configuration::get('APP_KEY')) $this->warning = $this->l('You have not yet set your Convead APP_KEY');
     $this->description = $this->l('Integrate Convead script into your shop');
-    $this->confirmUninstall = $this->l('Are you sure you want to delete your details ?');
+    $this->confirmUninstall = $this->l('Are you sure you want to delete your details?');
   }
 
   function install()
@@ -38,15 +38,11 @@ class Convead extends Module
   
   public function getContent()
   {
-    $output = '<h2>Convead Analytics</h2>';
+    $output = '<h2>'.$this->l('Convead').'</h2>';
     if (Tools::isSubmit('submitConvead') AND ($app_key = Tools::getValue('APP_KEY')))
     {
       Configuration::updateValue('APP_KEY', $app_key);
-      $output .= '
-      <div class="conf confirm">
-        <img src="../img/admin/ok.gif" alt="" title="" />
-        '.$this->l('Settings updated').'
-      </div>';
+      $output .= '<div class="bootstrap"><div class="alert alert-success">'.$this->l('Settings updated').'</div></div>';
     }
     return $output.$this->displayForm();
   }
@@ -71,7 +67,8 @@ class Convead extends Module
         <legend><img src="../img/admin/cog.gif" alt="" class="middle" />'.$this->l('Settings').'</legend>
         <label>'.$this->l('app_key').'</label>
         <div class="margin-form">
-          <input type="text" name="APP_KEY" value="'.Tools::safeOutput(Tools::getValue('APP_KEY', Configuration::get('APP_KEY'))).'" />
+          <input type="text" name="APP_KEY" value="'.Tools::safeOutput(Tools::getValue('APP_KEY', Configuration::get('APP_KEY'))).'" style="width: 300px" /><br />
+          '.$this->l('Register convead').' <a href="http://convead.io/" target="_blank">Convead</a>
         </div>
         <input type="submit" name="submitConvead" value="'.$this->l('Save').'" class="button" />
       </fieldset>
