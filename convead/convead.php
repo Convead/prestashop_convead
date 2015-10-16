@@ -25,8 +25,7 @@ class Convead extends Module
     if (!parent::install() ||
         !$this->registerHook('header') ||
         !$this->registerHook('orderConfirmation') ||
-        !$this->registerHook('cart') ||
-        !$this->registerHook('shoppingCart')
+        !$this->registerHook('cart')
       ) return false;
     return true;
   }
@@ -115,13 +114,12 @@ class Convead extends Module
     return ;
   }
 
-  function hookShoppingCart($params)
-  {
-    return $this->_updateCart($params);
-  }
-
   function hookCart($params)
   {
+    // rejection if the cart does not exist
+    $context = Context::getContext();
+    if (empty($context->cookie->id_cart)) return false;
+
     return $this->_updateCart($params);
   }
 
