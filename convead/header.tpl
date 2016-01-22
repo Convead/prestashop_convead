@@ -13,7 +13,7 @@ window.ConveadSettings = {
     {/literal}{if $is_product_page}{literal}
     onready: function() {
         convead('event', 'view_product', {
-            product_id: '{/literal}{$product_name}{literal}',
+            product_id: '{/literal}{$product_id}{literal}',
             product_name: '{/literal}{$product_name}{literal}',
             category_id: '{/literal}{$category_id}{literal}',
             product_url: window.location.href
