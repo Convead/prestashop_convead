@@ -140,8 +140,10 @@ class Convead extends Module
       $products_array = array();
       foreach ($products AS $product)
       {
+        $product_id = $product['product_id'];
+        if ($product['product_attribute_id']) $product_id .= 'c'.$product['product_attribute_id'];
         $products_array[] = array(
-          'product_id' => addslashes($product['product_id']),
+          'product_id' => $product_id,
           'qnt' => addslashes(intval($product['product_quantity'])),
           //'product_name' => addslashes($product['product_name']),
           'price' => Tools::ps_round(floatval($product['product_price_wt']) / floatval($conversion_rate), 2)
@@ -165,7 +167,9 @@ class Convead extends Module
     $products_cart = $params['cart']->getProducts(true);
     foreach($products_cart as $product)
     {
-      $c_products_cart[] = array('product_id' => $product['id_product'], 'qnt' => $product['cart_quantity'], 'price' => $product['price']);
+      $product_id = $product['id_product'];
+      if ($product['id_product_attribute']) $product_id .= 'c'.$product['id_product_attribute'];
+      $c_products_cart[] = array('product_id' => $product_id, 'qnt' => $product['cart_quantity'], 'price' => $product['price']);
     }
     $convead->eventUpdateCart($c_products_cart);
   }
