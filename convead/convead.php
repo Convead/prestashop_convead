@@ -93,6 +93,7 @@ class Convead extends Module
     if (Dispatcher::getInstance()->getController() == 'product' && $product_id = Tools::getValue('id_product'))
     {
       $product = new Product($product_id, true, $this->context->language->id, $this->context->shop->id);
+      if (!empty($product->cache_default_attribute)) $product_id .= 'c'.$product->cache_default_attribute;
       $this->context->smarty->assign('is_product_page', true);
       $this->context->smarty->assign('product_id', $product_id);
       $this->context->smarty->assign('product_name', $product->name);
