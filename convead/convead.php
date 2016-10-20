@@ -225,8 +225,8 @@ class Convead extends Module
     $state = $params['newOrderStatus']->id;
 
     // detect set new state or delete order
-    if ((string)$state == (string)Configuration::get('deleted_state_id')) $api->order_delete($order_id);
-    else $api->order_set_state($order_id, $state);
+    if ((string)$state == (string)Configuration::get('deleted_state_id')) $api->orderDelete($order_id);
+    else $api->orderSetState($order_id, $state);
   }
 
   function _updateCart($params)
