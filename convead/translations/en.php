@@ -10,8 +10,7 @@ $_MODULE['<{convead}prestashop>convead_63cbe3030295de9f64044e254bc70951'] = 'Dis
 $_MODULE['<{convead}prestashop>convead_b408d7ca962cef852b8ee6bdc54290a1'] = 'Disable php mbstring extension';
 $_MODULE['<{convead}prestashop>convead_e880708e7d4126f9461ff3d09d73edfc'] = 'Please contact technical support with your hosting service.';
 $_MODULE['<{convead}prestashop>convead_4fa8bb4b6275e8801df986259a5b57a0'] = 'APP KEY your account';
-$_MODULE['<{convead}prestashop>convead_dc2f4ab6fe11ce7028d60c266b318066'] = 'For APP KEY register when ';
-$_MODULE['<{convead}prestashop>convead_82d18286111248b20def2f226f90d811'] = 'Status canceled order';
+$_MODULE['<{convead}prestashop>convead_dc2f4ab6fe11ce7028d60c266b318066'] = 'For get keys register when ';
 $_MODULE['<{convead}prestashop>convead_c888438d14855d7d96a2724ee9c306bd'] = 'Settings updated';
 
 return $_MODULE;

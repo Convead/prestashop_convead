@@ -10,8 +10,7 @@ $_MODULE['<{convead}prestashop>convead_63cbe3030295de9f64044e254bc70951'] = 'О�
 $_MODULE['<{convead}prestashop>convead_b408d7ca962cef852b8ee6bdc54290a1'] = 'Отключено php расширение mbstring';
 $_MODULE['<{convead}prestashop>convead_e880708e7d4126f9461ff3d09d73edfc'] = 'Свяжитесь с службой техподдержки Вашего хостинга.';
 $_MODULE['<{convead}prestashop>convead_4fa8bb4b6275e8801df986259a5b57a0'] = 'APP KEY вашего аккаунта';
-$_MODULE['<{convead}prestashop>convead_dc2f4ab6fe11ce7028d60c266b318066'] = 'Для получения APP KEY зарегистрируйтесь в сервисе ';
-$_MODULE['<{convead}prestashop>convead_82d18286111248b20def2f226f90d811'] = 'Статус отмененного заказа';
+$_MODULE['<{convead}prestashop>convead_dc2f4ab6fe11ce7028d60c266b318066'] = 'Для получения ключей зарегистрируйтесь в сервисе ';
 $_MODULE['<{convead}prestashop>convead_c888438d14855d7d96a2724ee9c306bd'] = 'Настройки обновлены';
 
 return $_MODULE;

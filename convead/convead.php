@@ -25,9 +25,9 @@ class Convead extends Module
   {
     if (!parent::install() ||
         !$this->registerHook('header') ||
-        !$this->registerHook('orderConfirmation') ||
         !$this->registerHook('actionOrderStatusPostUpdate') ||
-        !$this->registerHook('cart')
+        !$this->registerHook('cart') ||
+        !$this->registerHook('newOrder')
       ) return false;
     return true;
   }
@@ -36,7 +36,7 @@ class Convead extends Module
   {
     if (!parent::uninstall()) return false;
     Configuration::deleteByName('APP_KEY');
-    Configuration::deleteByName('deleted_state_id');
+    Configuration::deleteByName('API_TOKEN');
     return true;
   }
   
@@ -54,18 +54,13 @@ class Convead extends Module
     
     if (!function_exists('curl_exec')) $output .= $this->displayError($this->l('Disabled expansion curl'));
     if (!extension_loaded('mbstring')) $output .= $this->displayError($this->l('Disabled expansion mbstring'));
-    if (count($error_array) > 0) $output .= $this->displayError('<span class="required">'.implode('<br />', $error_array).'</span><br /><b>'.$this->l('Contact support hosting').'</b>');
+    if (count($this->post_errors) > 0) $output .= $this->displayError('<span class="required">'.implode('<br />', $this->post_errors).'</span><br /><b>'.$this->l('Contact support hosting').'</b>');
 
     return $output.$this->displayForm();
   }
 
   public function displayForm()
-  {
-    $sate_core = new OrderStateCore();
-    $states = $sate_core->getOrderStates($this->context->language->id);
-    $options = array(''=>'-');
-    foreach($states as $state) $options[] = array('id_option'=>$state['id_order_state'], 'name'=>$state['name']);
-      
+  {      
     $this->fields_form[0]['form'] = array(
         'legend' => array(
         'title' => $this->l('Convead')
@@ -73,20 +68,16 @@ class Convead extends Module
       'input' => array(
         array(
           'type' => 'text',
-          'label' => $this->l('app_key'),
+          'label' => $this->l('api_token'),
           'desc' => $this->l('Register convead').' <a href="http://convead.io/" target="_blank">Convead</a>',
-          'name' => 'APP_KEY',
+          'name' => 'API_TOKEN',
           'required' => true
         ),
         array(
-          'type' => 'select',
-          'label' => $this->l('deleted_state_id'),
-          'name' => 'deleted_state_id',
-          'options' => array(
-            'query' => $options,
-            'id' => 'id_option',   
-            'name' => 'name'
-          )
+          'type' => 'text',
+          'label' => $this->l('app_key'),
+          'name' => 'APP_KEY',
+          'required' => true
         )
       ),
       'submit' => array(
@@ -119,7 +110,7 @@ class Convead extends Module
     $fields_values = array();
     
     $fields_values['APP_KEY'] = Configuration::get('APP_KEY');
-    $fields_values['deleted_state_id'] = Configuration::get('deleted_state_id');
+    $fields_values['API_TOKEN'] = Configuration::get('API_TOKEN');
     return $fields_values;
   }
   
@@ -131,7 +122,7 @@ class Convead extends Module
   private function _postProcess()
   {
     Configuration::updateValue('APP_KEY', (string)Tools::getValue('APP_KEY'));
-    Configuration::updateValue('deleted_state_id', (string)Tools::getValue('deleted_state_id'));
+    Configuration::updateValue('API_TOKEN', (string)Tools::getValue('API_TOKEN'));
       
     return $this->displayConfirmation($this->l('Settings updated'));
   }
@@ -175,16 +166,32 @@ class Convead extends Module
     $context = Context::getContext();
     if (empty($context->cookie->id_cart)) return false;
 
-    return $this->_updateCart($params);
+    return $this->_sendUpdateCart($params);
   }
 
-  function hookOrderConfirmation($params)
+  function hookActionOrderStatusPostUpdate($params)
   {
-    if (!($tracker = $this->_includeTracker())) return;
+    if (!($api = $this->_includeApi())) return;
+    
+    $order_id = $params['id_order'];
+    $state = $params['newOrderStatus']->id;
+
+    $api->orderUpdate($order_id, $state);
+  }
+
+  function hookNewOrder($params)
+  {
+    if (empty($params['order']) or empty($params['customer'])) return;
+    
+    $customer = $params['customer'];
+    $order = $params['order'];
+  
+    if (!($tracker = $this->_includeTracker($customer->id, $this->_getVisitorInfo($customer)))) return;
 
     $parameters = Configuration::getMultiple(array('PS_LANG_DEFAULT'));
     
-    $order = $params['objOrder'];
+    $order = $params['order'];
+    
     if (Validate::isLoadedObject($order))
     {
       $conversion_rate = 1;
@@ -203,35 +210,24 @@ class Convead extends Module
         $products_array[] = array(
           'product_id' => $product_id,
           'qnt' => addslashes(intval($product['product_quantity'])),
-          //'product_name' => addslashes($product['product_name']),
+          'product_name' => addslashes($product['product_name']),
           'price' => Tools::ps_round(floatval($product['product_price_wt']) / floatval($conversion_rate), 2)
         );
       }
 
       $total = Tools::ps_round(floatval($order->total_paid) / floatval($conversion_rate), 2);
       //$shipping = Tools::ps_round(floatval($order->total_shipping) / floatval($conversion_rate), 2);
-
+ 
       $tracker->eventOrder(intval($order->id), $total, $products_array);
     }
 
     return;
   }
 
-  function hookActionOrderStatusPostUpdate($params)
+  private function _sendUpdateCart($params)
   {
-    if (!($api = $this->_includeApi())) return;
-    
-    $order_id = $params['id_order'];
-    $state = $params['newOrderStatus']->id;
-
-    // detect set new state or delete order
-    if ((string)$state == (string)Configuration::get('deleted_state_id')) $api->orderDelete($order_id);
-    else $api->orderSetState($order_id, $state);
-  }
-
-  function _updateCart($params)
-  {
-    if (!($tracker = $this->_includeTracker()) || !isset($params['cart'])) return;
+    $user_id = $this->context->customer->isLogged() ? $this->context->customer->id : false;
+    if (!($tracker = $this->_includeTracker($user_id)) || !isset($params['cart'])) return;
 
     $c_products_cart = array();
     $products_cart = $params['cart']->getProducts(true);
@@ -243,20 +239,37 @@ class Convead extends Module
     }
     $tracker->eventUpdateCart($c_products_cart);
   }
-
-  function _includeApi()
+  
+  private function _getVisitorInfo($suctomer)
   {
+    $visitor_info = array();
+    $fields = array(
+      'lastname' => 'first_name',
+      'firstname' => 'last_name',
+      'email' => 'email'
+    );
+    foreach($fields as $key_cms=>$key_cnv)
+    {
+      if (!empty($suctomer->$key_cms)) $visitor_info[$key_cnv] = $suctomer->$key_cms;
+    }
+    return $visitor_info;
+  }
+
+  private function _includeApi()
+  {
+    $api_token = Configuration::get('API_TOKEN');
     $app_key = Configuration::get('APP_KEY');
 
     if (empty($app_key)) return false;
+    if (empty($app_key)) return false;
 
-    include_once('api/ConveadTracker.php');
+    include_once('api/ConveadApi.php');
 
-    $api = new ConveadApi($app_key);
+    $api = new ConveadApi($api_token, $app_key);
     return $api;
   }
 
-  function _includeTracker()
+  private function _includeTracker($user_id = false, $visitor_info = false)
   {
     $app_key = Configuration::get('APP_KEY');
 
@@ -264,19 +277,8 @@ class Convead extends Module
 
     include_once('api/ConveadTracker.php');
 
-    if ($this->context->customer->isLogged())
-    {
-      $user_id = $this->context->customer->id;
-      $guest_uid = false;
-    }
-    else 
-    {
-      if (empty($_COOKIE['convead_guest_uid'])) return false;
-      $guest_uid = $_COOKIE['convead_guest_uid'];
-    }
-
-    $tracker = new ConveadTracker($app_key, $_SERVER['SERVER_NAME'], $guest_uid, (isset($user_id) ? $user_id : false), (isset($visitor_info) ? $visitor_info : false));
-    
+    $guest_uid = !empty($_COOKIE['convead_guest_uid']) ? $_COOKIE['convead_guest_uid'] : false;
+    $tracker = new ConveadTracker($app_key, $_SERVER['SERVER_NAME'], $guest_uid, $user_id, (!empty($visitor_info) ? $visitor_info : false));
     return $tracker;
   }
 
