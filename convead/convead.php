@@ -62,7 +62,7 @@ class Convead extends Module
   public function displayForm()
   {      
     $this->fields_form[0]['form'] = array(
-        'legend' => array(
+      'legend' => array(
         'title' => $this->l('Convead')
       ),
       'input' => array(
@@ -217,8 +217,10 @@ class Convead extends Module
 
       $total = Tools::ps_round(floatval($order->total_paid) / floatval($conversion_rate), 2);
       //$shipping = Tools::ps_round(floatval($order->total_shipping) / floatval($conversion_rate), 2);
+
+      $state = OrderHistory::getLastOrderState($order->id);
  
-      $tracker->eventOrder(intval($order->id), $total, $products_array);
+      $tracker->eventOrder(intval($order->id), $total, $products_array, $state);
     }
 
     return;
