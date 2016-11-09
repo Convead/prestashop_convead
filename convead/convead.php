@@ -36,7 +36,6 @@ class Convead extends Module
   {
     if (!parent::uninstall()) return false;
     Configuration::deleteByName('APP_KEY');
-    Configuration::deleteByName('API_TOKEN');
     return true;
   }
   
@@ -66,13 +65,6 @@ class Convead extends Module
         'title' => $this->l('Convead')
       ),
       'input' => array(
-        array(
-          'type' => 'text',
-          'label' => $this->l('api_token'),
-          'desc' => $this->l('Register convead').' <a href="http://convead.io/" target="_blank">Convead</a>',
-          'name' => 'API_TOKEN',
-          'required' => true
-        ),
         array(
           'type' => 'text',
           'label' => $this->l('app_key'),
@@ -110,7 +102,6 @@ class Convead extends Module
     $fields_values = array();
     
     $fields_values['APP_KEY'] = Configuration::get('APP_KEY');
-    $fields_values['API_TOKEN'] = Configuration::get('API_TOKEN');
     return $fields_values;
   }
   
@@ -122,7 +113,6 @@ class Convead extends Module
   private function _postProcess()
   {
     Configuration::updateValue('APP_KEY', (string)Tools::getValue('APP_KEY'));
-    Configuration::updateValue('API_TOKEN', (string)Tools::getValue('API_TOKEN'));
       
     return $this->displayConfirmation($this->l('Settings updated'));
   }
@@ -171,12 +161,14 @@ class Convead extends Module
 
   function hookActionOrderStatusPostUpdate($params)
   {
-    if (!($api = $this->_includeApi())) return;
+    if (!($tracker = $this->_includeTracker())) return;
     
-    $order_id = $params['id_order'];
     $state = $params['newOrderStatus']->id;
+    $order = new Order((int)$params['id_order']);
 
-    $api->orderUpdate($order_id, $state);
+    if (!($order_data = $this->_getOrderData($order))) return;
+
+    $tracker->webHookOrderUpdate($order_data->order_id, $state, $order_data->revenue, $order_data->items);
   }
 
   function hookNewOrder($params)
@@ -184,46 +176,53 @@ class Convead extends Module
     if (empty($params['order']) or empty($params['customer'])) return;
     
     $customer = $params['customer'];
-    $order = $params['order'];
   
     if (!($tracker = $this->_includeTracker($customer->id, $this->_getVisitorInfo($customer)))) return;
-
-    $parameters = Configuration::getMultiple(array('PS_LANG_DEFAULT'));
     
     $order = $params['order'];
     
-    if (Validate::isLoadedObject($order))
-    {
-      $conversion_rate = 1;
-      if ($order->id_currency != Configuration::get('PS_CURRENCY_DEFAULT'))
-      {
-        $currency = new Currency(intval($order->id_currency));
-        $conversion_rate = floatval($currency->conversion_rate);
-      }
+    if (!($order_data = $this->_getOrderData($order))) return;
 
-      $products = $order->getProducts();
-      $products_array = array();
-      foreach ($products AS $product)
-      {
-        $product_id = $product['product_id'];
-        if ($product['product_attribute_id']) $product_id .= 'c'.$product['product_attribute_id'];
-        $products_array[] = array(
-          'product_id' => $product_id,
-          'qnt' => addslashes(intval($product['product_quantity'])),
-          'product_name' => addslashes($product['product_name']),
-          'price' => Tools::ps_round(floatval($product['product_price_wt']) / floatval($conversion_rate), 2)
-        );
-      }
-
-      $total = Tools::ps_round(floatval($order->total_paid) / floatval($conversion_rate), 2);
-      //$shipping = Tools::ps_round(floatval($order->total_shipping) / floatval($conversion_rate), 2);
-
-      $state = OrderHistory::getLastOrderState($order->id);
- 
-      $tracker->eventOrder(intval($order->id), $total, $products_array, $state);
-    }
+    $tracker->eventOrder($order_data->order_id, $order_data->revenue, $order_data->items, $order_data->state);
 
     return;
+  }
+
+  private function _getOrderData($order)
+  {
+    if (!(Validate::isLoadedObject($order))) return false;
+
+    $conversion_rate = 1;
+    if ($order->id_currency != Configuration::get('PS_CURRENCY_DEFAULT'))
+    {
+      $currency = new Currency(intval($order->id_currency));
+      $conversion_rate = floatval($currency->conversion_rate);
+    }
+
+    $products = $order->getProducts();
+    $products_array = array();
+    foreach ($products AS $product)
+    {
+      $product_id = $product['product_id'];
+      if ($product['product_attribute_id']) $product_id .= 'c'.$product['product_attribute_id'];
+      $products_array[] = array(
+        'product_id' => $product_id,
+        'qnt' => addslashes(intval($product['product_quantity'])),
+        'product_name' => addslashes($product['product_name']),
+        'price' => Tools::ps_round(floatval($product['product_price_wt']) / floatval($conversion_rate), 2)
+      );
+    }
+
+    $revenue = Tools::ps_round(floatval($order->total_paid) / floatval($conversion_rate), 2);
+    //$shipping = Tools::ps_round(floatval($order->total_shipping) / floatval($conversion_rate), 2);
+
+    $ret = new stdClass();
+    $ret->order_id = strval($order->id);
+    $ret->revenue = $revenue;
+    $ret->items = $products_array;
+    $ret->state = OrderHistory::getLastOrderState($order->id);
+
+    return $ret;
   }
 
   private function _sendUpdateCart($params)
@@ -255,20 +254,6 @@ class Convead extends Module
       if (!empty($suctomer->$key_cms)) $visitor_info[$key_cnv] = $suctomer->$key_cms;
     }
     return $visitor_info;
-  }
-
-  private function _includeApi()
-  {
-    $api_token = Configuration::get('API_TOKEN');
-    $app_key = Configuration::get('APP_KEY');
-
-    if (empty($app_key)) return false;
-    if (empty($app_key)) return false;
-
-    include_once('api/ConveadApi.php');
-
-    $api = new ConveadApi($api_token, $app_key);
-    return $api;
   }
 
   private function _includeTracker($user_id = false, $visitor_info = false)
