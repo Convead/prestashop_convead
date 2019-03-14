@@ -125,8 +125,8 @@ class Convead extends Module
 
     $this->context->smarty->assign('app_key', $app_key);
 
-    if ($this->context->customer->isLogged()) $this->context->smarty->assign('customer', $this->context->customer);
-    else $this->context->smarty->assign('customer', false);
+    if ($this->context->customer->isLogged()) $this->context->smarty->assign('visitor', $this->context->customer);
+    else $this->context->smarty->assign('visitor', false);
 
     if (Dispatcher::getInstance()->getController() == 'product' && $product_id = Tools::getValue('id_product'))
     {

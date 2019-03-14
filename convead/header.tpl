@@ -2,12 +2,12 @@
 {literal}
 <script>
 window.ConveadSettings = {
-  {/literal}{if $customer}{literal}
-  visitor_uid: '{/literal}{$customer->id}{literal}',
+  {/literal}{if $visitor}{literal}
+  visitor_uid: '{/literal}{$visitor->id}{literal}',
   visitor_info: {
-    first_name: '{/literal}{$customer->firstname}{literal}',
-    last_name: '{/literal}{$customer->lastname}{literal}',
-    email: '{/literal}{$customer->email}{literal}'
+    first_name: '{/literal}{$visitor->firstname}{literal}',
+    last_name: '{/literal}{$visitor->lastname}{literal}',
+    email: '{/literal}{$visitor->email}{literal}'
   },
   {/literal}{/if}{literal}
   app_key: "{/literal}{$app_key}{literal}"
