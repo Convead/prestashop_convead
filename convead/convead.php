@@ -8,7 +8,7 @@ class Convead extends Module
   {
     $this->name = 'convead';
     $this->tab = 'analytics_stats';
-    $this->version = '2.0';
+    $this->version = '2.1';
     $this->author = 'Rostber';
     $this->displayName = $this->l('Convead');
     $this->module_key = '95857606d6e384f5992eeb0771f7a3a5';
